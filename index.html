@@ -143,6 +143,12 @@ body.axs-loggedout>header,body.axs-loggedout>footer,body.axs-loggedout>#cloudPan
 .axs-loginlang button{width:auto;margin:0;border:0;border-radius:999px;padding:6px 10px;background:transparent;color:#77736D;font-size:11px;font-weight:900;cursor:pointer}
 .axs-loginlang button.active{background:#545454;color:#fff}
 
+.topactions{flex-wrap:wrap;justify-content:flex-end}
+.cloud-saved{font-size:11px;font-weight:600;color:var(--muted);line-height:1.4;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#fff;white-space:nowrap}
+#cloudLogout{white-space:nowrap}
+@media(max-width:1050px){.topbar{gap:12px}.topactions{gap:6px}.cloud-saved{font-size:10px}}
+@media(max-width:650px){.topbar{flex-wrap:wrap}.topactions{flex:1;justify-content:flex-end}.topactions #cloudLogout{display:inline-flex}.cloud-saved{order:5;flex-basis:100%;text-align:right;border:0;background:transparent;padding:2px 0}}
+
 </style>
 </head>
 <body class="axs-loggedout">
@@ -154,9 +160,9 @@ body.axs-loggedout>header,body.axs-loggedout>footer,body.axs-loggedout>#cloudPan
       <span data-i18n="subtitle">UAE MoF Pre-Approval & Accreditation Tracker</span>
     </div>
   </div>
-  <div class="topactions">
+  <div class="topactions"><span id="cloudSavedAt" class="cloud-saved" role="status" aria-live="polite" hidden></span>
     <div class="lang"><button id="huBtn" class="active">HU</button><button id="enBtn">EN</button></div>
-    <button class="btn secondary" id="exportBtn" data-i18n="export">Export JSON</button>
+    <button class="btn secondary" id="exportBtn" data-i18n="export">Export JSON</button><button id="cloudLogout" class="btn secondary" data-cloud-hu="Kijelentkezés" data-cloud-en="Sign out" hidden>Kijelentkezés</button>
   </div>
 </header>
 
@@ -171,9 +177,9 @@ body.axs-loggedout>header,body.axs-loggedout>footer,body.axs-loggedout>#cloudPan
 <div id="cloudLoginError" role="status" aria-live="polite"></div>
 <div class="axs-loginfoot" data-cloud-hu="Védett hozzáférés • Közös projektadatok" data-cloud-en="Secure access • Shared project data">Védett hozzáférés • Közös projektadatok</div>
 </form></div>
-<section class="card" style="margin:16px auto;padding:20px;max-width:1400px" id="cloudPanel">
+<section class="card" style="margin:16px auto;padding:20px;max-width:1400px" id="cloudPanel" hidden>
 <p id="cloudMessage" role="status" aria-live="polite">Jelentkezz be a közös adatbázishoz. / Sign in to the shared database.</p>
-<button id="cloudLogout" class="btn secondary" data-cloud-hu="Kijelentkezés" data-cloud-en="Sign out" hidden>Kijelentkezés</button>
+
 <div id="cloudImport" hidden><p>A közös tár üres. Válaszd ki a korábban exportált JSON fájlt, majd ellenőrizd a feladatszámot. / Select your previously exported JSON file and check the task count.</p><button id="cloudUseLocal" class="btn secondary" data-cloud-hu="E böngésző korábbi adatainak kiválasztása" data-cloud-en="Select this browser’s previous data" hidden>E böngésző korábbi adatainak kiválasztása</button><input id="cloudImportFile" type="file" accept=".json,application/json"><p id="cloudImportPreview"></p><button id="cloudImportConfirm" class="btn" hidden data-cloud-hu="Adatok átvitele" data-cloud-en="Import data">Adatok átvitele</button></div>
 <button id="cloudRetry" class="btn" hidden data-cloud-hu="Mentés újra" data-cloud-en="Retry save">Mentés újra</button>
 <button id="cloudDraft" class="btn secondary" hidden data-cloud-hu="Piszkozat export" data-cloud-en="Export draft">Piszkozat export</button>
@@ -451,14 +457,36 @@ const CLOUD_URL='https://fuqgyfpgmhfivkaaljcm.supabase.co';
 const CLOUD_KEY='sb_publishable_vx1lB6ImgwjxUb4JazjXXQ_bA0H8qXj';
 let cloudSession=null,cloudRole=null,cloudRevision=0,cloudBusy=false,cloudPending=false,cloudConflict=false,cloudRefreshing=null;
 let editRevision=null;
-let cloudLastMessage=null;
+let cloudLastMessage=null,cloudSavedTime=null;
+const CLOUD_SESSION_KEY='axs-mof-session-v1';
+function cloudRememberSession(){try{sessionStorage.setItem(CLOUD_SESSION_KEY,JSON.stringify({access_token:cloudSession.access_token,refresh_token:cloudSession.refresh_token,expires_at:cloudSession.expires_at,user:{id:cloudSession.user.id}}));}catch{}}
+function cloudForgetSession(){try{sessionStorage.removeItem(CLOUD_SESSION_KEY)}catch{}}
+function cloudPanelVisibility(){document.querySelector('#cloudPanel').hidden=!cloudSession||(!cloudLastMessage&&!cloudPending&&document.querySelector('#cloudImport').hidden&&document.querySelector('#cloudRecovered').hidden);}
+function cloudSaved(row){cloudSavedTime=row.updated_at;cloudLastMessage=null;document.querySelector('#cloudMessage').textContent='';cloudLanguage();cloudPanelVisibility();}
+async function cloudOpenSession(s){
+ cloudSession={...s,expires_at:s.expires_at||Math.floor(Date.now()/1000)+s.expires_in};
+ const members=await cloudRequest('/rest/v1/axs_members?select=role&user_id=eq.'+s.user.id);
+ if(!members.length){const error=new Error('Not enrolled');error.status=403;throw error}cloudRole=members[0].role;
+ await cloudLoad();cloudRememberSession();document.querySelector('#cloudPassword').value='';document.querySelector('#cloudLogin').hidden=true;document.querySelector('main').hidden=false;
+ let draft=null;try{draft=JSON.parse(localStorage.getItem('axs-cloud-draft-'+s.user.id)||'null')}catch{}
+ if(draft){document.querySelector('#cloudRecovered').hidden=false;document.querySelector('#cloudRecoverExport').onclick=()=>cloudDownload(draft,'axs-recovered-draft.json');}
+}
+async function cloudRestoreSession(){
+ let saved=null;try{saved=JSON.parse(sessionStorage.getItem(CLOUD_SESSION_KEY)||'null')}catch{cloudForgetSession()}
+ if(!saved)return;
+ if(!saved.access_token||!saved.refresh_token||!saved.user?.id||!Number.isFinite(saved.expires_at)){cloudForgetSession();return}
+ cloudBusy=true;document.querySelector('#cloudLoginBtn').disabled=true;
+ try{await cloudOpenSession(saved)}catch(e){cloudSession=null;cloudRole=null;if([400,401,403].includes(e.status))cloudForgetSession();cloudMessage('A munkamenet nem tölthető be. Próbálj frissíteni, vagy jelentkezz be újra.','Unable to restore your session. Refresh or sign in again.');}
+ finally{cloudBusy=false;document.querySelector('#cloudLoginBtn').disabled=false;cloudControls()}
+}
 function cloudLanguage(){
  document.querySelectorAll('[data-cloud-hu]').forEach(el=>el.textContent=lang==='hu'?el.dataset.cloudHu:el.dataset.cloudEn);
+ const saved=document.querySelector('#cloudSavedAt');saved.textContent=cloudSavedTime?cloudText('Utolsó mentés: ','Last saved: ')+new Date(cloudSavedTime).toLocaleString(lang==='hu'?'hu-HU':'en-GB'):'';saved.hidden=!cloudSession||!cloudSavedTime;
  if(cloudLastMessage)document.querySelector('#cloudMessage').textContent=cloudText(...cloudLastMessage);
  if(!cloudSession&&cloudLastMessage)document.querySelector('#cloudLoginError').textContent=cloudText(...cloudLastMessage);
 }
 const cloudText=(hu,en)=>lang==='hu'?hu:en;
-function cloudMessage(hu,en){cloudLastMessage=[hu,en];document.querySelector('#cloudMessage').textContent=cloudText(hu,en)}
+function cloudMessage(hu,en){cloudLastMessage=[hu,en];document.querySelector('#cloudMessage').textContent=cloudText(hu,en);cloudPanelVisibility()}
 function cloudControls(){
  document.body.classList.toggle('axs-loggedout',!cloudSession);
  document.querySelector('#loginHuBtn').classList.toggle('active',lang==='hu');document.querySelector('#loginEnBtn').classList.toggle('active',lang==='en');
@@ -472,6 +500,7 @@ function cloudControls(){
  document.querySelector('#cloudRetry').hidden=!cloudPending||cloudConflict;
  document.querySelector('#cloudReload').hidden=!cloudPending;
  document.querySelector('#cloudDraft').hidden=!cloudPending;
+ cloudPanelVisibility();
 }
 async function cloudRequest(path,options={},retry=true){
  if(cloudSession && Date.now()>cloudSession.expires_at*1000-60000){
@@ -486,7 +515,7 @@ async function cloudRequest(path,options={},retry=true){
 }
 async function cloudRefresh(){
  const r=await fetch(CLOUD_URL+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{apikey:CLOUD_KEY,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:cloudSession.refresh_token}),signal:AbortSignal.timeout(20000)});
- if(!r.ok)throw new Error('Session expired');const s=await r.json();cloudSession={...s,expires_at:s.expires_at||Math.floor(Date.now()/1000)+s.expires_in};
+ if(!r.ok){const error=new Error('Session expired');error.status=r.status;throw error}const s=await r.json();cloudSession={...s,expires_at:s.expires_at||Math.floor(Date.now()/1000)+s.expires_in};cloudRememberSession();
 }
 function cloudValid(p){
  if(!p||!Array.isArray(p.tasks)||!p.tasks.length||JSON.stringify(p).length>2000000)throw new Error('Invalid import');
@@ -499,7 +528,7 @@ function cloudDownload(payload,name){const url=URL.createObjectURL(new Blob([JSO
 async function cloudLoad(){
  const rows=await cloudRequest('/rest/v1/axs_dashboard?id=eq.1&select=*');
  const row=rows[0];
- if(row){cloudValid(row.payload);state=structuredClone(row.payload);cloudRevision=Number(row.revision);document.querySelector('#cloudImport').hidden=true;renderFilters();render();cloudMessage('Közösen mentve • '+new Date(row.updated_at).toLocaleString('hu-HU'),'Saved to shared database • '+new Date(row.updated_at).toLocaleString('en-GB'));}
+ if(row){cloudValid(row.payload);state=structuredClone(row.payload);cloudRevision=Number(row.revision);document.querySelector('#cloudImport').hidden=true;renderFilters();render();cloudSaved(row);}
  else{state={tasks:[],milestones:[],criticalPoints:[]};cloudRevision=0;renderFilters();render();document.querySelector('#cloudImport').hidden=cloudRole!=='owner';
  try{const legacy=JSON.parse(localStorage.getItem(KEY)||'null');document.querySelector('#cloudUseLocal').hidden=!legacy;if(legacy)document.querySelector('#cloudUseLocal').onclick=()=>cloudPrepareImport(cloudValid(legacy));}catch{document.querySelector('#cloudUseLocal').hidden=true}cloudMessage('A közös tár még üres. Az első importot a tulajdonos végzi el.','Shared database is empty. The owner must import the initial data.');}
  cloudControls();
@@ -512,7 +541,7 @@ async function cloudSave(){
   const row=await cloudRequest('/rest/v1/rpc/axs_save',{method:'POST',body:JSON.stringify({expected_revision:cloudRevision,new_payload:state})});
   cloudRevision=Number(row.revision);cloudPending=false;cloudConflict=false;
   try{localStorage.removeItem('axs-cloud-draft-'+cloudSession.user.id)}catch{}
-  document.querySelector('#cloudImport').hidden=true;renderFilters();render();cloudMessage('Közösen mentve • '+new Date(row.updated_at).toLocaleString('hu-HU'),'Saved to shared database • '+new Date(row.updated_at).toLocaleString('en-GB'));
+  document.querySelector('#cloudImport').hidden=true;renderFilters();render();cloudSaved(row);
  }catch(e){
   cloudConflict=e.code==='40001'||e.message.includes('AXS_CONFLICT');
   cloudMessage(cloudConflict?'Másvalaki közben módosított. A te változatod nem írta felül a közös adatokat. Exportáld a piszkozatot, majd töltsd be a közös állapotot.':'A mentést nem sikerült visszaigazolni. A piszkozat megmaradt ezen a képernyőn; exportáld vagy próbáld újra.',cloudConflict?'Someone else made changes. Your version has not overwritten the shared data. Export your draft, then load the shared version.':'Save could not be confirmed. Your draft remains on this screen; export it or retry.');
@@ -521,21 +550,16 @@ async function cloudSave(){
 function cloudCanEdit(){if(!cloudSession||!cloudRevision||cloudBusy||cloudPending)return false;return true}
 function cloudLoginEmail(value){const name=value.trim();return name.toLowerCase()==='axs-project'?'sutipeter+axs-project@gmail.com':name;}
 async function cloudLogin(e){
- e.preventDefault();cloudLastMessage=null;document.querySelector('#cloudLoginError').textContent='';const b=document.querySelector('#cloudLoginBtn');b.disabled=true;
+ e.preventDefault();cloudSession=null;cloudRole=null;cloudForgetSession();cloudLastMessage=null;document.querySelector('#cloudLoginError').textContent='';const b=document.querySelector('#cloudLoginBtn');b.disabled=true;
  try{
   const s=await cloudRequest('/auth/v1/token?grant_type=password',{method:'POST',body:JSON.stringify({email:cloudLoginEmail(document.querySelector('#cloudEmail').value),password:document.querySelector('#cloudPassword').value})});
-  cloudSession={...s,expires_at:s.expires_at||Math.floor(Date.now()/1000)+s.expires_in};
-  const members=await cloudRequest('/rest/v1/axs_members?select=role&user_id=eq.'+s.user.id);
-  if(!members.length)throw new Error('Not enrolled');cloudRole=members[0].role;
-  await cloudLoad();document.querySelector('#cloudPassword').value='';document.querySelector('#cloudLogin').hidden=true;document.querySelector('main').hidden=false;
-  let draft=null;try{draft=JSON.parse(localStorage.getItem('axs-cloud-draft-'+s.user.id)||'null')}catch{}
-  if(draft){document.querySelector('#cloudRecovered').hidden=false;document.querySelector('#cloudRecoverExport').onclick=()=>cloudDownload(draft,'axs-recovered-draft.json');}
+  await cloudOpenSession(s);
  }catch{cloudSession=null;cloudMessage('A belépés nem sikerült. Ellenőrizd az adatokat és a projekt-hozzáférést.','Sign-in failed. Check your credentials and project membership.');}finally{b.disabled=false;cloudControls()}
 }
 document.querySelector('#loginHuBtn').onclick=()=>{lang='hu';localStorage.setItem('axs-lang',lang);applyLang()};
 document.querySelector('#loginEnBtn').onclick=()=>{lang='en';localStorage.setItem('axs-lang',lang);applyLang()};
 document.querySelector('#cloudLoginForm').addEventListener('submit',cloudLogin);
-document.querySelector('#cloudLogout').onclick=()=>{if(cloudBusy)return;if(cloudPending)cloudDownload(state,'axs-unsaved-draft.json');cloudSession=null;cloudRole=null;cloudRevision=0;cloudPending=false;cloudConflict=false;state={tasks:[]};document.querySelector('#dlg').close();document.querySelector('#cloudLogin').hidden=false;document.querySelector('main').hidden=true;document.querySelector('#cloudImport').hidden=true;document.querySelector('#cloudRecovered').hidden=true;render();cloudMessage('Kijelentkeztél.','Signed out.');};
+document.querySelector('#cloudLogout').onclick=()=>{if(cloudBusy)return;if(cloudPending)cloudDownload(state,'axs-unsaved-draft.json');cloudForgetSession();cloudSavedTime=null;cloudSession=null;cloudRole=null;cloudRevision=0;cloudPending=false;cloudConflict=false;state={tasks:[]};document.querySelector('#dlg').close();document.querySelector('#cloudLogin').hidden=false;document.querySelector('main').hidden=true;document.querySelector('#cloudImport').hidden=true;document.querySelector('#cloudRecovered').hidden=true;render();cloudMessage('Kijelentkeztél.','Signed out.');};
 document.querySelector('#cloudRetry').onclick=cloudSave;
 document.querySelector('#cloudDraft').onclick=()=>cloudDownload(state,'axs-unsaved-draft.json');
 document.querySelector('#cloudReload').onclick=async()=>{if(cloudBusy)return;cloudDownload(state,'axs-unsaved-draft.json');cloudBusy=true;try{await cloudLoad();cloudPending=false;cloudConflict=false;}catch{cloudMessage('A közös adatok betöltése nem sikerült.','Could not load shared data.')}finally{cloudBusy=false;cloudControls()}};
@@ -548,9 +572,9 @@ document.querySelector('#cloudImportFile').onchange=async e=>{
  try{const file=e.target.files[0];if(!file)return;if(file.size>2000000)throw new Error('Too large');cloudPrepareImport(cloudValid(JSON.parse(await file.text())));}catch{document.querySelector('#cloudImportConfirm').hidden=true;cloudMessage('A kiválasztott JSON fájl nem érvényes dashboard-export.','The selected file is not a valid dashboard export.');}
 };
 setInterval(async()=>{if(!cloudSession||cloudBusy||cloudPending||document.querySelector('#dlg').open)return;cloudBusy=true;try{await cloudLoad()}catch{cloudMessage('A kapcsolat megszakadt. Az adatok nem biztos, hogy frissek.','Connection interrupted. Data may be out of date.')}finally{cloudBusy=false;cloudControls()}},10000);
-window.addEventListener('beforeunload',e=>{if(cloudPending||cloudBusy){e.preventDefault();e.returnValue=''}});
+window.addEventListener('beforeunload',e=>{if(cloudPending){e.preventDefault();e.returnValue=''}});
 cloudControls();
 
-applyLang();
+applyLang();cloudRestoreSession();
 </script>
 </body></html>
