@@ -145,7 +145,7 @@ footer{padding:20px;text-align:center;color:var(--muted);font-size:11px}
 <section class="card" style="margin:16px auto;padding:20px;max-width:1400px" id="cloudPanel">
 <p id="cloudMessage" role="status" aria-live="polite">Jelentkezz be a közös adatbázishoz. / Sign in to the shared database.</p>
 <button id="cloudLogout" class="btn secondary" data-cloud-hu="Kijelentkezés" data-cloud-en="Sign out" hidden>Kijelentkezés</button><div id="cloudLogin"><form id="cloudLoginForm" style="display:flex;gap:12px;flex-wrap:wrap">
-<label>E-mail <input id="cloudEmail" type="email" autocomplete="username" required></label>
+<label><span data-cloud-hu="Felhasználónév vagy e-mail" data-cloud-en="Username or email">Felhasználónév vagy e-mail</span> <input id="cloudEmail" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required></label>
 <label><span data-cloud-hu="Jelszó" data-cloud-en="Password">Jelszó</span> <input id="cloudPassword" type="password" autocomplete="current-password" required></label>
 <button id="cloudLoginBtn" class="btn" data-cloud-hu="Belépés" data-cloud-en="Sign in">Belépés</button>
 </form></div>
@@ -482,10 +482,11 @@ async function cloudSave(){
  }finally{cloudBusy=false;cloudControls();}
 }
 function cloudCanEdit(){if(!cloudSession||!cloudRevision||cloudBusy||cloudPending)return false;return true}
+function cloudLoginEmail(value){const name=value.trim();return name.toLowerCase()==='axs-project'?'sutipeter+axs-project@gmail.com':name;}
 async function cloudLogin(e){
  e.preventDefault();const b=document.querySelector('#cloudLoginBtn');b.disabled=true;
  try{
-  const s=await cloudRequest('/auth/v1/token?grant_type=password',{method:'POST',body:JSON.stringify({email:document.querySelector('#cloudEmail').value.trim(),password:document.querySelector('#cloudPassword').value})});
+  const s=await cloudRequest('/auth/v1/token?grant_type=password',{method:'POST',body:JSON.stringify({email:cloudLoginEmail(document.querySelector('#cloudEmail').value),password:document.querySelector('#cloudPassword').value})});
   cloudSession={...s,expires_at:s.expires_at||Math.floor(Date.now()/1000)+s.expires_in};
   const members=await cloudRequest('/rest/v1/axs_members?select=role&user_id=eq.'+s.user.id);
   if(!members.length)throw new Error('Not enrolled');cloudRole=members[0].role;
