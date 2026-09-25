@@ -149,6 +149,10 @@ body.axs-loggedout>header,body.axs-loggedout>footer,body.axs-loggedout>#cloudPan
 @media(max-width:1050px){.topbar{gap:12px}.topactions{gap:6px}.cloud-saved{font-size:10px}}
 @media(max-width:650px){.topbar{flex-wrap:wrap}.topactions{flex:1;justify-content:flex-end}.topactions #cloudLogout{display:inline-flex}.cloud-saved{order:5;flex-basis:100%;text-align:right;border:0;background:transparent;padding:2px 0}}
 
+
+#documentLibrary{padding:28px;margin-top:24px;scroll-margin-top:110px}
+.doc-controls{display:flex;gap:12px;margin:20px 0;flex-wrap:wrap}.doc-controls input,.doc-controls select{min-width:0;flex:1;padding:12px;border:1px solid var(--line);border-radius:10px;background:white}
+.doc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,430px),1fr));gap:18px}.doc-card{padding:22px;border:1px solid var(--line);border-radius:16px;background:var(--paper);scroll-margin-top:110px}.doc-card:focus{outline:2px solid var(--gold)}.doc-heading{display:flex;justify-content:space-between;gap:12px;align-items:start}.doc-heading h3{margin:0 0 10px;font-size:18px;line-height:1.4}.doc-meta{color:var(--muted);font-size:13px;line-height:1.7}.doc-version{background:var(--gold-soft);color:var(--gold-dark);border-radius:8px;padding:6px 10px;font-weight:700;white-space:nowrap}.doc-actions{display:flex;gap:8px;flex-wrap:wrap}.doc-link{background:none;border:0;color:var(--gold-dark);padding:3px 0;text-align:left;text-decoration:underline;text-underline-offset:3px}.task-documents{margin-top:14px;padding-top:12px;border-top:1px solid var(--line);font-size:13px}.doc-card summary{cursor:pointer;font-weight:600;margin-top:14px}.doc-history-row{display:flex;justify-content:space-between;gap:10px;border-top:1px solid var(--line);margin-top:12px;padding-top:12px}.doc-download small{font-weight:400}.doc-card .pill{font-size:11px}.doc-card p{margin:12px 0}#taskDocumentPanel{margin:12px 0}
 </style>
 </head>
 <body class="axs-loggedout">
@@ -162,7 +166,7 @@ body.axs-loggedout>header,body.axs-loggedout>footer,body.axs-loggedout>#cloudPan
   </div>
   <div class="topactions"><span id="cloudSavedAt" class="cloud-saved" role="status" aria-live="polite" hidden></span>
     <div class="lang"><button id="huBtn" class="active">HU</button><button id="enBtn">EN</button></div>
-    <button class="btn secondary" id="exportBtn" data-i18n="export">Export JSON</button><button id="cloudLogout" class="btn secondary" data-cloud-hu="Kijelentkezés" data-cloud-en="Sign out" hidden>Kijelentkezés</button>
+    <button class="btn secondary" id="documentsNav" data-doc-hu="Dokumentumtár" data-doc-en="Documents" hidden>Dokumentumtár</button><button class="btn secondary" id="exportBtn" data-i18n="export">Export JSON</button><button id="cloudLogout" class="btn secondary" data-cloud-hu="Kijelentkezés" data-cloud-en="Sign out" hidden>Kijelentkezés</button>
   </div>
 </header>
 
@@ -264,7 +268,12 @@ body.axs-loggedout>header,body.axs-loggedout>footer,body.axs-loggedout>#cloudPan
   </div>
   <div id="kanbanView" class="kanban hidden"></div>
 </section>
-</main>
+<section class="card" id="documentLibrary" hidden>
+<div class="headrow"><div><div class="kicker" data-doc-hu="Közös dokumentumok" data-doc-en="Shared documents">Közös dokumentumok</div><h2 data-doc-hu="Dokumentumtár" data-doc-en="Document library">Dokumentumtár</h2></div><span id="documentCount" class="doc-meta"></span></div>
+<p class="doc-meta" data-doc-hu="A legfrissebb változat és minden korábbi verzió egy helyen. A tervezet feltöltése nem jelenti a feladat teljesítését vagy a dokumentum jóváhagyását." data-doc-en="Current and previous versions in one place. Uploading a draft does not complete a task or approve the document.">A legfrissebb változat és minden korábbi verzió egy helyen.</p>
+<div class="doc-controls"><input id="documentSearch" aria-label="Dokumentum keresése" placeholder="Keresés a dokumentumok között…"><select id="documentTaskFilter" aria-label="Kapcsolódó feladat"></select></div>
+<p id="documentMessage" role="status" aria-live="polite"></p><div id="documentRows" class="doc-grid"></div>
+</section></main>
 
 <dialog id="dlg"><form id="form">
 <input type="hidden" id="id">
@@ -276,11 +285,12 @@ body.axs-loggedout>header,body.axs-loggedout>footer,body.axs-loggedout>#cloudPan
 <label><span data-i18n="legal">Jogalap</span><input id="legal"></label>
 <label><span data-i18n="evidence">Bizonyíték</span><textarea id="evidence" rows="3"></textarea></label>
 <label><span data-i18n="notes">Megjegyzés</span><textarea id="notes" rows="3"></textarea></label>
-<div class="actions"><button type="button" class="btn secondary" onclick="dlg.close()" data-i18n="cancel">Mégse</button><button type="submit" class="btn" data-i18n="save">Mentés</button></div>
+<div id="taskDocumentPanel"></div><div class="actions"><button type="button" class="btn secondary" onclick="dlg.close()" data-i18n="cancel">Mégse</button><button type="submit" class="btn" data-i18n="save">Mentés</button></div>
 </form></dialog>
 
 <footer data-i18n="footer">AXS Core Technologies • közös adatbázis • frissítés 10 másodpercenként</footer>
 
+<script src="documents.js?v=1"></script>
 <script>
 const KEY='axs-mof-preapproval-bilingual-v2';
 let state={tasks:[],milestones:[],criticalPoints:[]};
@@ -381,7 +391,7 @@ function renderTasks(){
    return `<tr>
 <td><span class="pill s-${t.status}">${statusLabels[lang][t.status]}</span></td>
 <td>
-  <div class="ttitle">${esc(title)}</div>
+  <div class="ttitle">${esc(title)}</div>${taskDocumentMarkup(t.id)}
   <div class="detailgrid">
     <div class="detailitem"><b>${lang==='hu'?'Beadandó bizonyíték':'Required evidence'}:</b><br>${esc(t.evidence||'—')}</div>
     <div class="detailitem"><b>${lang==='hu'?'Teendő / megjegyzés':'Action / note'}:</b><br>${esc(t.notes||'—')}</div>
@@ -434,12 +444,12 @@ function bindKanbanDnD(){
   });
 }
 
-function render(){summary();renderProcess();renderTasks();cloudControls();}
+function render(){summary();renderProcess();renderTasks();cloudControls();libraryRender();}
 function editTask(id){
  if(!cloudCanEdit())return; editRevision=cloudRevision;
  const t=id?state.tasks.find(x=>x.id===id):{id:'',title_hu:'',title_en:'',group_hu:'',group_en:'',owner_hu:'',owner_en:'',status:'todo',priority:'high',deadline:'',legal:'',evidence:'',notes:''};
  for(const field of ['group','owner']){$('#'+field+'New').value='';$('#'+field+'New').hidden=true;$('#'+field+'New').required=false;}
- $('#id').value=t.id;$('#title').value=lang==='hu'?t.title_hu:t.title_en;$('#group').value=lang==='hu'?(t.group_hu||'').trim():(t.group_en||'').trim();$('#owner').value=lang==='hu'?(t.owner_hu||'').trim():(t.owner_en||'').trim();$('#status').value=t.status;$('#priority').value=t.priority;$('#deadline').value=t.deadline||'';$('#legal').value=t.legal||'';$('#evidence').value=t.evidence||'';$('#notes').value=t.notes||'';dlg.showModal();
+ $('#id').value=t.id;$('#title').value=lang==='hu'?t.title_hu:t.title_en;$('#group').value=lang==='hu'?(t.group_hu||'').trim():(t.group_en||'').trim();$('#owner').value=lang==='hu'?(t.owner_hu||'').trim():(t.owner_en||'').trim();$('#status').value=t.status;$('#priority').value=t.priority;$('#deadline').value=t.deadline||'';$('#legal').value=t.legal||'';$('#evidence').value=t.evidence||'';$('#notes').value=t.notes||'';libraryTaskPanel(t.id);dlg.showModal();
 }
 $('#form').addEventListener('submit',e=>{
  e.preventDefault();if(!cloudCanEdit()||editRevision!==cloudRevision)return;const id=Number($('#id').value);let t=id?state.tasks.find(x=>x.id===id):null;
