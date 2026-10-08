@@ -153,6 +153,10 @@ body.axs-loggedout>header,body.axs-loggedout>footer,body.axs-loggedout>#cloudPan
 #documentLibrary{padding:28px;margin-top:24px;scroll-margin-top:110px}
 .doc-controls{display:flex;gap:12px;margin:20px 0;flex-wrap:wrap}.doc-controls input,.doc-controls select{min-width:0;flex:1;padding:12px;border:1px solid var(--line);border-radius:10px;background:white}
 .doc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,430px),1fr));gap:18px}.doc-card{padding:22px;border:1px solid var(--line);border-radius:16px;background:var(--paper);scroll-margin-top:110px}.doc-card:focus{outline:2px solid var(--gold)}.doc-heading{display:flex;justify-content:space-between;gap:12px;align-items:start}.doc-heading h3{margin:0 0 10px;font-size:18px;line-height:1.4}.doc-meta{color:var(--muted);font-size:13px;line-height:1.7}.doc-version{background:var(--gold-soft);color:var(--gold-dark);border-radius:8px;padding:6px 10px;font-weight:700;white-space:nowrap}.doc-actions{display:flex;gap:8px;flex-wrap:wrap}.doc-link{background:none;border:0;color:var(--gold-dark);padding:3px 0;text-align:left;text-decoration:underline;text-underline-offset:3px}.task-documents{margin-top:14px;padding-top:12px;border-top:1px solid var(--line);font-size:13px}.doc-card summary{cursor:pointer;font-weight:600;margin-top:14px}.doc-history-row{display:flex;justify-content:space-between;gap:10px;border-top:1px solid var(--line);margin-top:12px;padding-top:12px}.doc-download small{font-weight:400}.doc-card .pill{font-size:11px}.doc-card p{margin:12px 0}#taskDocumentPanel{margin:12px 0}
+
+.wf-stages{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:20px 0}.wf-stage{display:flex;flex-direction:column;gap:10px;text-align:left;border:1px solid var(--line);border-top:4px solid var(--gold);border-radius:12px;padding:16px;background:#fff;color:var(--ink)}.wf-stage-A,.wf-stage-B{background:var(--gold-soft)}.wf-stage-P{border-top-color:#d38a31;background:#fff4e3}.wf-stage-D,.wf-stage-X{grid-column:span 2}.wf-stage[aria-pressed="true"]{outline:2px solid var(--gold-dark)}.wf-stage-title{font-size:16px;font-weight:750;line-height:1.4}.wf-count{font-size:12px;color:var(--muted)}.wf-meter{height:5px;background:#e7e2da;border-radius:3px;display:block}.wf-meter>span{display:block;height:5px;background:var(--gold);border-radius:3px}.wf-note{font-size:12px;color:var(--muted);line-height:1.6;margin:6px 0}.wf-events{display:flex;gap:20px;flex-wrap:wrap;font-size:13px;padding:14px;background:var(--cream);border-radius:10px}.wf-guidance{margin-top:15px}.wf-guidance summary,.regcard summary{cursor:pointer;font-weight:600}.wf-filters{display:flex;flex-wrap:wrap;gap:10px;padding:14px;margin-top:20px}.wf-filters select{flex:1;min-width:180px;border:1px solid var(--line);border-radius:9px;padding:10px;background:white}.wf-tags{display:flex;flex-wrap:wrap;gap:5px;margin:8px 0}.wf-tags .pill{font-size:11px}.wf-edit{border:1px solid var(--line);border-radius:10px;margin:16px 0;padding:14px}.wf-undated{font-size:12px;color:var(--gold-dark)}#wfDatesDialog{max-width:850px;width:90vw}#wfDatesDialog form{padding:22px}#wfDatesDialog input{width:100%;padding:10px}#wfDateError{color:var(--danger)}.tablecard{scroll-margin-top:120px}
+@media(max-width:1000px){.wf-stages{grid-template-columns:repeat(2,minmax(0,1fr))}.wf-stage-D,.wf-stage-X{grid-column:auto}}
+@media(max-width:600px){.wf-stages{grid-template-columns:1fr}.wf-events{display:block}.wf-events span{display:block;margin:5px 0}.processcard .headrow{flex-wrap:wrap;gap:12px}.topactions #documentsNav,.topactions #cloudLogout{display:inline-block}.wf-filters select{width:100%}}
 </style>
 </head>
 <body class="axs-loggedout">
@@ -211,7 +215,16 @@ body.axs-loggedout>header,body.axs-loggedout>footer,body.axs-loggedout>#cloudPan
   <div class="card stat critical"><span data-i18n="criticalOpen">Kritikus nyitott</span><strong id="sCrit">0</strong></div>
 </section>
 
-<section class="card regcard">
+<section class="card processcard" id="workflowOverview">
+<div class="headrow"><div><div class="kicker" data-wf-hu="A teljes akkreditáció útja" data-wf-en="Path to full accreditation">A teljes akkreditáció útja</div><h2 data-wf-hu="Dokumentumok → jóváhagyás → tesztelés" data-wf-en="Documents → approval → testing">Dokumentumok → jóváhagyás → tesztelés</h2></div><button id="wfDatesBtn" class="btn secondary" data-wf-hu="Dátumok és döntések" data-wf-en="Dates and decisions">Dátumok és döntések</button></div>
+<p class="wf-note" data-wf-hu="A blokkra kattintva annak feladatait látod. A kész dokumentum és a kész feladat nem jelent automatikus hatósági jóváhagyást. A felkészülés párhuzamosan is haladhat." data-wf-en="Select a block to see its tasks. A completed document or task does not automatically grant authority approval. Preparation can run in parallel."></p>
+<div id="wfStages" class="wf-stages"></div><div id="wfEventsSummary" class="wf-events"></div>
+<details class="wf-guidance"><summary data-wf-hu="Határidők és eljárási tudnivalók" data-wf-en="Timing and process notes">Határidők és eljárási tudnivalók</summary><p id="wfAuthorityTimers" class="wf-note"></p>
+<p class="wf-note" data-wf-hu="Biztosítás: a kezdeti review után, a Pre-Approval teszteredmények beadásához. ISO 22301 és auditált beszámoló: külön utólagos feladat, igazolt pénzügyi év alapján. ISO 27001: nincs automatikus három hónapos haladék." data-wf-en="Insurance: after initial review, for submission of Pre-Approval test results. ISO 22301 and audited accounts: separate deferred tasks, based on the confirmed financial year. ISO 27001 has no automatic three-month extension."></p>
+<p class="wf-note" data-wf-hu="Pontosítás: az 56/2026 módosítás szerint a PSP-termék kétéves múltját a szolgáltató vagy közreműködő is igazolhatja (5 bis); a miniszteri felmentés az 5. cikk (3). A hiánypótlásra adott saját határidőt a portálakcióból rögzítsd." data-wf-en="Correction: amendment 56/2026 permits the provider or third party to evidence the PSP product’s two-year experience (5 bis); the ministerial waiver is Article 5(3). Record your own response deadline from the portal action."></p>
+<p class="wf-note"><a href="https://mof.gov.ae/en/services/accreditation-of-einvoicing-service-providers/" target="_blank" rel="noopener">MoF szolgáltatás / service</a> · <a href="https://mof.gov.ae/wp-content/uploads/2025/03/Ministerial_Decision_Eligibility_and_Accreditation_procedure_for_SPs_EN.pdf" target="_blank" rel="noopener">64/2025</a> · <a href="https://mof.gov.ae/wp-content/uploads/2026/05/Ministerial-Resolution-No.-56-of-2026-Amending-Certain-Provisions-of-Ministerial-Resolution-No.-64-of-2025-En-20260510.pdf" target="_blank" rel="noopener">56/2026</a> · <a href="https://einvoicing.mof.gov.ae/SelfService/Themes/SPA/Images/Accreditation_Application_UserGuide.pdf" target="_blank" rel="noopener">Portal User Guide</a></p></details>
+</section>
+<details class="card regcard"><summary data-wf-hu="UAE általános bevezetési ütemezés — nem a saját kérelem határideje" data-wf-en="UAE rollout timeline — not your application deadline">UAE általános bevezetési ütemezés — nem a saját kérelem határideje</summary>
   <div class="headrow">
     <div><div class="kicker" data-i18n="legalTimeline">Jogszabályi idővonal</div><h2 data-i18n="criticalDates">Kritikus UAE eInvoicing mérföldkövek</h2></div>
     <div class="source" data-i18n="legalSource">Forrás: UAE MoF • MD 244/2025, módosítva MD 66/2026-tal</div>
@@ -238,15 +251,11 @@ body.axs-loggedout>header,body.axs-loggedout>footer,body.axs-loggedout>#cloudPan
       <div><strong data-i18n="smeGoLive">Kötelező éles indulás</strong><small data-i18n="smeGoLiveDesc">&lt; AED 50M éves árbevételű cégek számára.</small><span class="flag" data-i18n="nextWave">Következő hullám</span></div>
     </div>
   </div>
-</section>
+</details>
 
-<section class="card processcard">
-  <div class="headrow" style="margin-bottom:8px">
-    <div><div class="kicker" data-i18n="process">Akkreditációs folyamat</div><h2 data-i18n="processTitle">Pre-Approval → teljes akkreditáció</h2></div>
-  </div>
-  <div class="processrail" id="processRail"></div>
-</section>
 
+
+<section class="card wf-filters"><select id="wfStageFilter" aria-label="Folyamatblokk"></select><select id="wfKindFilter" aria-label="Feladattípus"></select><select id="wfDueFilter" aria-label="Határidő állapota"></select><button id="wfClear" class="btn secondary" data-wf-hu="Szűrők törlése" data-wf-en="Clear filters">Szűrők törlése</button></section>
 <section class="card controls">
   <input id="search" data-i18n-ph="search" placeholder="Keresés feladat, felelős, jogalap szerint…">
   <select id="statusFilter"></select>
@@ -285,12 +294,14 @@ body.axs-loggedout>header,body.axs-loggedout>footer,body.axs-loggedout>#cloudPan
 <label><span data-i18n="legal">Jogalap</span><input id="legal"></label>
 <label><span data-i18n="evidence">Bizonyíték</span><textarea id="evidence" rows="3"></textarea></label>
 <label><span data-i18n="notes">Megjegyzés</span><textarea id="notes" rows="3"></textarea></label>
-<div id="taskDocumentPanel"></div><div class="actions"><button type="button" class="btn secondary" onclick="dlg.close()" data-i18n="cancel">Mégse</button><button type="submit" class="btn" data-i18n="save">Mentés</button></div>
+<fieldset class="wf-edit"><legend data-wf-hu="Folyamat és ütemezés" data-wf-en="Process and timing">Folyamat és ütemezés</legend><div class="form2"><label><span data-wf-hu="Folyamatblokk" data-wf-en="Process block">Folyamatblokk</span><select id="wfEditStage"></select></label><label><span data-wf-hu="Feladattípus" data-wf-en="Task type">Feladattípus</span><select id="wfEditKind"></select></label></div><label><span data-wf-hu="Mikorra kell?" data-wf-en="When is it due?">Mikorra kell?</span><select id="wfEditRule"></select></label><label><span data-wf-hu="A fenti határidő jellege" data-wf-en="Type of the date above">A fenti határidő jellege</span><select id="wfEditSource"></select></label><p id="wfEditHint" class="wf-note"></p></fieldset><div id="taskDocumentPanel"></div><div class="actions"><button type="button" class="btn secondary" onclick="dlg.close()" data-i18n="cancel">Mégse</button><button type="submit" class="btn" data-i18n="save">Mentés</button></div>
 </form></dialog>
 
+<dialog id="wfDatesDialog"><form id="wfDatesForm"><h3 data-wf-hu="Dátumok és hatósági döntések" data-wf-en="Dates and authority decisions">Dátumok és hatósági döntések</h3><p class="wf-note" data-wf-hu="A beadási céldátum terv. A többi eseményt csak igazolt teljesüléskor rögzítsd; az üres mező ismeretlen időpontot jelent. A munkanapos hatósági válaszidők nem számítódnak át automatikus naptári dátummá." data-wf-en="The submission target is a plan. Record other events only when confirmed; an empty field means unknown. Authority business-day response periods are not converted automatically to calendar dates."></p><div id="wfDateFields" class="form2"></div><p id="wfDateError" role="alert"></p><div class="actions"><button type="button" class="btn secondary" onclick="document.querySelector('#wfDatesDialog').close()" data-wf-hu="Mégse" data-wf-en="Cancel">Mégse</button><button type="submit" class="btn" data-wf-hu="Mentés" data-wf-en="Save">Mentés</button></div></form></dialog>
 <footer data-i18n="footer">AXS Core Technologies • közös adatbázis • frissítés 10 másodpercenként</footer>
 
-<script src="documents.js?v=1"></script>
+<script src="documents.js?v=2"></script>
+<script src="workflow.js?v=1"></script>
 <script>
 const KEY='axs-mof-preapproval-bilingual-v2';
 let state={tasks:[],milestones:[],criticalPoints:[]};
@@ -367,7 +378,7 @@ function filtered(){
  return state.tasks.filter(t=>{
    const group=lang==='hu'?t.group_hu:t.group_en, title=lang==='hu'?t.title_hu:t.title_en, owner=lang==='hu'?t.owner_hu:t.owner_en;
    const hay=[title,group,owner,t.legal,t.evidence,t.notes].join(' ').toLowerCase();
-   return(!q||hay.includes(q))&&(!sf||t.status===sf)&&(!gf||(group||'').trim()===gf)&&(!of||(owner||'').trim()===of)&&(!pf||t.priority===pf);
+   return wfMatch(t)&&(!q||hay.includes(q))&&(!sf||t.status===sf)&&(!gf||(group||'').trim()===gf)&&(!of||(owner||'').trim()===of)&&(!pf||t.priority===pf);
  })
 }
 function summary(){
@@ -376,10 +387,7 @@ function summary(){
  $('#doneCount').textContent=done;$('#totalCount').textContent=state.tasks.length+' '+tr('total');
  $('#sDone').textContent=done;$('#sProg').textContent=state.tasks.filter(t=>t.status==='inprogress').length;$('#sTodo').textContent=state.tasks.filter(t=>t.status==='todo').length;$('#sNa').textContent=state.tasks.filter(t=>t.status==='na').length;$('#sCrit').textContent=state.tasks.filter(t=>t.priority==='critical'&&t.status!=='done'&&t.status!=='na').length;
 }
-function renderProcess(){
- const names=lang==='hu'?processHU:processEN;
- $('#processRail').innerHTML=names.map((x,i)=>`<div class="step ${i===0?'current':''}"><div class="stepnum">${i}</div><strong>${esc(x)}</strong></div>`).join('');
-}
+function renderProcess(){wfRender();}
 function deadline(d){
  if(!d)return '—';const diff=Math.ceil((new Date(d+'T00:00:00')-new Date())/86400000);
  return d+(diff<0?` <span class="pill p-critical">${tr('overdue')}</span>`:'');
@@ -391,7 +399,7 @@ function renderTasks(){
    return `<tr>
 <td><span class="pill s-${t.status}">${statusLabels[lang][t.status]}</span></td>
 <td>
-  <div class="ttitle">${esc(title)}</div>${taskDocumentMarkup(t.id)}
+  <div class="ttitle">${esc(title)}</div>${wfTaskMarkup(t)}${taskDocumentMarkup(t.id)}
   <div class="detailgrid">
     <div class="detailitem"><b>${lang==='hu'?'Beadandó bizonyíték':'Required evidence'}:</b><br>${esc(t.evidence||'—')}</div>
     <div class="detailitem"><b>${lang==='hu'?'Teendő / megjegyzés':'Action / note'}:</b><br>${esc(t.notes||'—')}</div>
@@ -399,11 +407,11 @@ function renderTasks(){
 </td>
 <td>${esc(group)}</td><td>${esc(owner||'—')}</td>
 <td><span class="pill p-${t.priority}">${priorityLabels[lang][t.priority]}</span></td>
-<td>${deadline(t.deadline)}</td><td>${esc(t.legal||'—')}</td>
+<td>${wfDeadlineMarkup(t)}</td><td>${esc(t.legal||'—')}</td>
 <td><button class="btn secondary" onclick="editTask(${t.id})">${tr('edit')}</button></td></tr>`;
  }).join('');
  const cols=['todo','inprogress','done','na'];
- $('#kanbanView').innerHTML=cols.map(s=>`<div class="kcol" data-status="${s}"><h3>${statusLabels[lang][s]} (${rows.filter(t=>t.status===s).length})</h3>${rows.filter(t=>t.status===s).map(t=>{const title=lang==='hu'?t.title_hu:t.title_en,owner=lang==='hu'?t.owner_hu:t.owner_en;return `<div class="kcard" draggable="true" data-id="${t.id}"><strong>${esc(title)}</strong><small>${esc(owner||'—')} · ${priorityLabels[lang][t.priority]}</small></div>`}).join('')}</div>`).join('');
+ $('#kanbanView').innerHTML=cols.map(s=>`<div class="kcol" data-status="${s}"><h3>${statusLabels[lang][s]} (${rows.filter(t=>t.status===s).length})</h3>${rows.filter(t=>t.status===s).map(t=>{const title=lang==='hu'?t.title_hu:t.title_en,owner=lang==='hu'?t.owner_hu:t.owner_en;return `<div class="kcard" draggable="true" data-id="${t.id}"><strong>${esc(title)}</strong>${wfTaskMarkup(t)}<div class="wf-note">${wfDeadlineMarkup(t)}</div><small>${esc(owner||'—')} · ${priorityLabels[lang][t.priority]}</small></div>`}).join('')}</div>`).join('');
  bindKanbanDnD();cloudControls();
 }
 
@@ -449,14 +457,14 @@ function editTask(id){
  if(!cloudCanEdit())return; editRevision=cloudRevision;
  const t=id?state.tasks.find(x=>x.id===id):{id:'',title_hu:'',title_en:'',group_hu:'',group_en:'',owner_hu:'',owner_en:'',status:'todo',priority:'high',deadline:'',legal:'',evidence:'',notes:''};
  for(const field of ['group','owner']){$('#'+field+'New').value='';$('#'+field+'New').hidden=true;$('#'+field+'New').required=false;}
- $('#id').value=t.id;$('#title').value=lang==='hu'?t.title_hu:t.title_en;$('#group').value=lang==='hu'?(t.group_hu||'').trim():(t.group_en||'').trim();$('#owner').value=lang==='hu'?(t.owner_hu||'').trim():(t.owner_en||'').trim();$('#status').value=t.status;$('#priority').value=t.priority;$('#deadline').value=t.deadline||'';$('#legal').value=t.legal||'';$('#evidence').value=t.evidence||'';$('#notes').value=t.notes||'';libraryTaskPanel(t.id);dlg.showModal();
+ $('#id').value=t.id;$('#title').value=lang==='hu'?t.title_hu:t.title_en;$('#group').value=lang==='hu'?(t.group_hu||'').trim():(t.group_en||'').trim();$('#owner').value=lang==='hu'?(t.owner_hu||'').trim():(t.owner_en||'').trim();$('#status').value=t.status;$('#priority').value=t.priority;$('#deadline').value=t.deadline||'';$('#legal').value=t.legal||'';$('#evidence').value=t.evidence||'';$('#notes').value=t.notes||'';wfEdit(t);libraryTaskPanel(t.id);dlg.showModal();
 }
 $('#form').addEventListener('submit',e=>{
  e.preventDefault();if(!cloudCanEdit()||editRevision!==cloudRevision)return;const id=Number($('#id').value);let t=id?state.tasks.find(x=>x.id===id):null;
  if(!t){t={id:Math.max(0,...state.tasks.map(x=>x.id))+1,title_hu:'',title_en:'',group_hu:'',group_en:'',owner_hu:'',owner_en:'',status:'todo',priority:'high',deadline:'',legal:'',evidence:'',notes:''};state.tasks.push(t)}
  if(lang==='hu'){t.title_hu=$('#title').value.trim();t.group_hu=formValue('group');t.owner_hu=formValue('owner'); if(!t.title_en)t.title_en=t.title_hu;if(!t.group_en)t.group_en=t.group_hu;if(!t.owner_en)t.owner_en=t.owner_hu}
  else{t.title_en=$('#title').value.trim();t.group_en=formValue('group');t.owner_en=formValue('owner'); if(!t.title_hu)t.title_hu=t.title_en;if(!t.group_hu)t.group_hu=t.group_en;if(!t.owner_hu)t.owner_hu=t.owner_en}
- t.status=$('#status').value;t.priority=$('#priority').value;t.deadline=$('#deadline').value;t.legal=$('#legal').value.trim();t.evidence=$('#evidence').value.trim();t.notes=$('#notes').value.trim();dlg.close();save();
+ t.status=$('#status').value;t.priority=$('#priority').value;t.deadline=$('#deadline').value;t.legal=$('#legal').value.trim();t.evidence=$('#evidence').value.trim();t.notes=$('#notes').value.trim();wfSaveTask(t);dlg.close();save();
 });
 ['search','statusFilter','groupFilter','ownerFilter','priorityFilter'].forEach(id=>$('#'+id).addEventListener('input',renderTasks));
 for(const field of ['group','owner'])$('#'+field).addEventListener('change',()=>setupNewValue(field));
@@ -510,6 +518,7 @@ function cloudControls(){
  document.querySelector('#cloudRetry').hidden=!cloudPending||cloudConflict;
  document.querySelector('#cloudReload').hidden=!cloudPending;
  document.querySelector('#cloudDraft').hidden=!cloudPending;
+ document.querySelector('#wfDatesBtn').disabled=blocked;
  cloudPanelVisibility();
 }
 async function cloudRequest(path,options={},retry=true){
@@ -569,7 +578,7 @@ async function cloudLogin(e){
 document.querySelector('#loginHuBtn').onclick=()=>{lang='hu';localStorage.setItem('axs-lang',lang);applyLang()};
 document.querySelector('#loginEnBtn').onclick=()=>{lang='en';localStorage.setItem('axs-lang',lang);applyLang()};
 document.querySelector('#cloudLoginForm').addEventListener('submit',cloudLogin);
-document.querySelector('#cloudLogout').onclick=()=>{if(cloudBusy)return;if(cloudPending)cloudDownload(state,'axs-unsaved-draft.json');cloudForgetSession();cloudSavedTime=null;cloudSession=null;cloudRole=null;cloudRevision=0;cloudPending=false;cloudConflict=false;state={tasks:[]};document.querySelector('#dlg').close();document.querySelector('#cloudLogin').hidden=false;document.querySelector('main').hidden=true;document.querySelector('#cloudImport').hidden=true;document.querySelector('#cloudRecovered').hidden=true;render();cloudMessage('Kijelentkeztél.','Signed out.');};
+document.querySelector('#cloudLogout').onclick=()=>{if(cloudBusy)return;if(cloudPending)cloudDownload(state,'axs-unsaved-draft.json');cloudForgetSession();cloudSavedTime=null;cloudSession=null;cloudRole=null;cloudRevision=0;cloudPending=false;cloudConflict=false;state={tasks:[]};document.querySelector('#dlg').close();document.querySelector('#wfDatesDialog').close();document.querySelector('#cloudLogin').hidden=false;document.querySelector('main').hidden=true;document.querySelector('#cloudImport').hidden=true;document.querySelector('#cloudRecovered').hidden=true;render();cloudMessage('Kijelentkeztél.','Signed out.');};
 document.querySelector('#cloudRetry').onclick=cloudSave;
 document.querySelector('#cloudDraft').onclick=()=>cloudDownload(state,'axs-unsaved-draft.json');
 document.querySelector('#cloudReload').onclick=async()=>{if(cloudBusy)return;cloudDownload(state,'axs-unsaved-draft.json');cloudBusy=true;try{await cloudLoad();cloudPending=false;cloudConflict=false;}catch{cloudMessage('A közös adatok betöltése nem sikerült.','Could not load shared data.')}finally{cloudBusy=false;cloudControls()}};
@@ -581,10 +590,10 @@ function cloudPrepareImport(p){
 document.querySelector('#cloudImportFile').onchange=async e=>{
  try{const file=e.target.files[0];if(!file)return;if(file.size>2000000)throw new Error('Too large');cloudPrepareImport(cloudValid(JSON.parse(await file.text())));}catch{document.querySelector('#cloudImportConfirm').hidden=true;cloudMessage('A kiválasztott JSON fájl nem érvényes dashboard-export.','The selected file is not a valid dashboard export.');}
 };
-setInterval(async()=>{if(!cloudSession||cloudBusy||cloudPending||document.querySelector('#dlg').open)return;cloudBusy=true;try{await cloudLoad()}catch{cloudMessage('A kapcsolat megszakadt. Az adatok nem biztos, hogy frissek.','Connection interrupted. Data may be out of date.')}finally{cloudBusy=false;cloudControls()}},10000);
+setInterval(async()=>{if(!cloudSession||cloudBusy||cloudPending||(document.querySelector('#dlg').open||document.querySelector('#wfDatesDialog').open))return;cloudBusy=true;try{await cloudLoad()}catch{cloudMessage('A kapcsolat megszakadt. Az adatok nem biztos, hogy frissek.','Connection interrupted. Data may be out of date.')}finally{cloudBusy=false;cloudControls()}},10000);
 window.addEventListener('beforeunload',e=>{if(cloudPending){e.preventDefault();e.returnValue=''}});
 cloudControls();
 
-applyLang();cloudRestoreSession();
+wfInit();applyLang();cloudRestoreSession();
 </script>
 </body></html>

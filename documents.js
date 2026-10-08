@@ -63,7 +63,7 @@ async function libraryDownload(id,version,index,button){
 document.addEventListener('click',e=>{
  const link=e.target.closest('[data-document]');if(link){libraryOpenDocument(link.dataset.document);return}
  const download=e.target.closest('[data-doc-id]');if(download){libraryDownload(download.dataset.docId,download.dataset.version,Number(download.dataset.file),download);return}
- const task=e.target.closest('[data-task-link]');if(task&&cloudSession){['statusFilter','groupFilter','ownerFilter','priorityFilter'].forEach(id=>document.getElementById(id).value='');const t=state.tasks.find(t=>t.id===Number(task.dataset.taskLink));document.querySelector('#search').value=t?.['title_'+lang]||t?.title_hu||'';view='list';renderTasks();document.querySelector('.tablecard').scrollIntoView({behavior:'smooth'});}
+ const task=e.target.closest('[data-task-link]');if(task&&cloudSession){['statusFilter','groupFilter','ownerFilter','priorityFilter','wfStageFilter','wfKindFilter','wfDueFilter'].forEach(id=>document.getElementById(id).value='');const t=state.tasks.find(t=>t.id===Number(task.dataset.taskLink));document.querySelector('#search').value=t?.['title_'+lang]||t?.title_hu||'';view='list';renderTasks();document.querySelector('.tablecard').scrollIntoView({behavior:'smooth'});}
 });
 document.querySelector('#documentSearch').addEventListener('input',libraryFilter);
 document.querySelector('#documentTaskFilter').addEventListener('change',libraryFilter);
